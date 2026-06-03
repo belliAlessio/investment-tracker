@@ -1,6 +1,6 @@
 // ── Init ──────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (!isApiSupported()) {
     document.getElementById('browser-warning').classList.remove('hidden');
     return;
@@ -10,7 +10,32 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
+
+  const result = await tryAutoOpenFile();
+  if (result === 'auto') {
+    onFileLoaded();
+  } else if (result && result.status === 'prompt') {
+    showReopenBanner(result.handle);
+  }
 });
+
+function showReopenBanner(handle) {
+  const banner = document.getElementById('no-file-banner');
+  banner.innerHTML = `
+    <p>Trovato il file precedente <strong>${handle.name}</strong>.</p>
+    <button class="btn btn-primary" id="btn-reopen">Riapri</button>
+    <button class="btn btn-secondary" style="margin-left:8px" id="btn-reopen-other">Scegli altro file</button>
+  `;
+  document.getElementById('btn-reopen').addEventListener('click', async () => {
+    try {
+      await reopenSavedHandle(handle);
+      onFileLoaded();
+    } catch (e) {
+      if (e.message !== 'Permesso negato') alert('Errore: ' + e.message);
+    }
+  });
+  document.getElementById('btn-reopen-other').addEventListener('click', handleOpenFile);
+}
 
 async function handleOpenFile() {
   try {
@@ -126,7 +151,7 @@ function renderStrumenti() {
 
 function showStrumentoForm(existing = null) {
   const isEdit = !!existing;
-  const s = existing ?? { nome: '', piattaforma: '', tipo: 'fondo', isin: '' };
+  const s = existing ?? { nome: '', piattaforma: '', tipo: 'fondo', isin: '', capitalePreesistente: 0 };
   document.getElementById('strumento-form-container').innerHTML = `
     <div class="panel" style="margin-bottom:16px;border:1px solid var(--indigo)">
       <h3 style="font-size:15px;font-weight:600;margin-bottom:16px">${isEdit ? 'Modifica strumento' : 'Nuovo strumento'}</h3>
@@ -150,6 +175,12 @@ function showStrumentoForm(existing = null) {
           <input id="sf-isin" class="form-input" value="${escHtml(s.isin)}"
             placeholder="es. IE00B4L5Y983" style="font-family:monospace">
         </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Capitale preesistente (€)</label>
+          <input id="sf-capitale" type="number" min="0" step="0.01" class="form-input"
+            value="${s.capitalePreesistente || 0}" placeholder="0">
+          <span style="font-size:12px;color:var(--text-muted);margin-top:4px;display:block">Capitale già investito prima della prima registrazione — viene incluso nel calcolo del rendimento.</span>
+        </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn btn-primary" onclick="handleSaveStrumento(${isEdit ? `'${s.id}'` : 'null'})">
@@ -170,12 +201,13 @@ async function handleSaveStrumento(id) {
   const piattaforma = document.getElementById('sf-piattaforma').value.trim();
   const tipo = document.getElementById('sf-tipo').value;
   const isin = document.getElementById('sf-isin').value.trim().toUpperCase();
+  const capitalePreesistente = parseFloat(document.getElementById('sf-capitale').value) || 0;
   if (!nome || !piattaforma) { alert('Nome e Piattaforma sono obbligatori.'); return; }
   try {
     if (id) {
-      await updateStrumento(id, { nome, piattaforma, tipo, isin });
+      await updateStrumento(id, { nome, piattaforma, tipo, isin, capitalePreesistente });
     } else {
-      await addStrumento({ nome, piattaforma, tipo, isin });
+      await addStrumento({ nome, piattaforma, tipo, isin, capitalePreesistente });
     }
     renderStrumenti();
   } catch (e) { alert('Errore: ' + e.message); }

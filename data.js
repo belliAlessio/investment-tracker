@@ -9,12 +9,69 @@ function isApiSupported() {
   return 'showOpenFilePicker' in window;
 }
 
+// ── Handle persistence (IndexedDB) ───────────────────────────────────────
+
+const IDB_NAME = 'pac-tracker';
+const IDB_STORE = 'file-handle';
+const IDB_KEY = 'last-handle';
+
+function _openIDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+async function _saveHandleToIDB(handle) {
+  const db = await _openIDB();
+  const tx = db.transaction(IDB_STORE, 'readwrite');
+  tx.objectStore(IDB_STORE).put(handle, IDB_KEY);
+  return new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = e => rej(e.target.error); });
+}
+
+async function _loadHandleFromIDB() {
+  const db = await _openIDB();
+  const tx = db.transaction(IDB_STORE, 'readonly');
+  const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+  return new Promise((res, rej) => { req.onsuccess = e => res(e.target.result ?? null); req.onerror = e => rej(e.target.error); });
+}
+
+// Returns 'auto' (opened), 'prompt' (handle found but needs user gesture), or null (no handle)
+async function tryAutoOpenFile() {
+  try {
+    const handle = await _loadHandleFromIDB();
+    if (!handle) return null;
+    const perm = await handle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      fileHandle = handle;
+      const file = await fileHandle.getFile();
+      appData = JSON.parse(await file.text());
+      return 'auto';
+    }
+    return { status: 'prompt', handle };
+  } catch {
+    return null;
+  }
+}
+
+async function reopenSavedHandle(handle) {
+  const perm = await handle.requestPermission({ mode: 'readwrite' });
+  if (perm !== 'granted') throw new Error('Permesso negato');
+  fileHandle = handle;
+  const file = await fileHandle.getFile();
+  appData = JSON.parse(await file.text());
+  return appData;
+}
+
 async function openExistingFile() {
   [fileHandle] = await window.showOpenFilePicker({
     types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
   });
   const file = await fileHandle.getFile();
   appData = JSON.parse(await file.text());
+  await _saveHandleToIDB(fileHandle);
   return appData;
 }
 
@@ -25,6 +82,7 @@ async function createNewFile() {
   });
   appData = structuredClone(EMPTY_DATA);
   await persistData();
+  await _saveHandleToIDB(fileHandle);
   return appData;
 }
 
@@ -45,8 +103,8 @@ function generateId(base) {
   return `${slug}-${Date.now().toString(36)}`;
 }
 
-async function addStrumento({ nome, piattaforma, tipo, isin = '' }) {
-  const strumento = { id: generateId(nome), nome, piattaforma, tipo, isin };
+async function addStrumento({ nome, piattaforma, tipo, isin = '', capitalePreesistente = 0 }) {
+  const strumento = { id: generateId(nome), nome, piattaforma, tipo, isin, capitalePreesistente: Number(capitalePreesistente) || 0 };
   appData.strumenti.push(strumento);
   await persistData();
   return strumento;
@@ -105,10 +163,12 @@ async function deleteRegistrazione(id) {
 // ── Computed Stats ────────────────────────────────────────────────────────
 
 function computeStrumentoStats(strumentoId) {
+  const strumento = appData.strumenti.find(s => s.id === strumentoId);
+  const capitalePreesistente = strumento ? (strumento.capitalePreesistente || 0) : 0;
   const regs = appData.registrazioni
     .filter(r => r.strumentoId === strumentoId)
     .sort((a, b) => a.mese.localeCompare(b.mese));
-  const totalInvestito = regs.reduce((sum, r) => sum + r.versamento, 0);
+  const totalInvestito = capitalePreesistente + regs.reduce((sum, r) => sum + r.versamento, 0);
   const latest = regs[regs.length - 1];
   const valoreAttuale = latest ? latest.valoreFinale : 0;
   const rendimentoEuro = valoreAttuale - totalInvestito;
