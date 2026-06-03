@@ -201,3 +201,68 @@ function getRecentRegistrazioni(limit = 8) {
 function getPiattaforme() {
   return [...new Set(appData.strumenti.map(s => s.piattaforma))];
 }
+
+// ── Fund Info API (Yahoo Finance via ISIN) ────────────────────────────────
+
+const _fundCache = new Map();
+
+async function fetchFundInfo(isin) {
+  if (_fundCache.has(isin)) return _fundCache.get(isin);
+  try {
+    // Step 1: ISIN → ticker via search
+    const searchResp = await fetch(
+      `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(isin)}&quotesCount=5&newsCount=0`
+    );
+    if (!searchResp.ok) return null;
+    const searchJson = await searchResp.json();
+    const quotes = searchJson.quotes ?? [];
+    const match = quotes.find(q => ['ETF', 'MUTUALFUND', 'EQUITY'].includes(q.quoteType)) ?? quotes[0];
+    if (!match) return null;
+
+    // Step 2: 5-year monthly chart — no crumb needed
+    const chartResp = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(match.symbol)}?range=5y&interval=1mo`
+    );
+    if (!chartResp.ok) return null;
+    const chartJson = await chartResp.json();
+    const cr = chartJson?.chart?.result?.[0];
+    if (!cr) return null;
+
+    const meta     = cr.meta;
+    const closes   = cr.indicators?.quote?.[0]?.close ?? [];
+    const tss      = cr.timestamp ?? [];
+    const current  = meta.regularMarketPrice;
+    const nowSec   = Date.now() / 1000;
+
+    const priceAt = (targetSec) => {
+      let best = null, bestDiff = Infinity;
+      for (let i = 0; i < tss.length; i++) {
+        const d = Math.abs(tss[i] - targetSec);
+        if (d < bestDiff && closes[i] != null) { bestDiff = d; best = closes[i]; }
+      }
+      return best;
+    };
+
+    const ret = (past) => (past && current) ? (current - past) / past * 100 : null;
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime() / 1000;
+
+    const info = {
+      symbol:          match.symbol,
+      longName:        meta.longName ?? match.longname ?? match.shortname,
+      currency:        meta.currency,
+      quoteType:       meta.instrumentType ?? match.quoteType,
+      exchange:        meta.fullExchangeName ?? meta.exchangeName,
+      currentPrice:    current,
+      high52:          meta.fiftyTwoWeekHigh,
+      low52:           meta.fiftyTwoWeekLow,
+      ytdReturn:       ret(priceAt(startOfYear)),
+      oneYearReturn:   ret(priceAt(nowSec - 365 * 86400)),
+      threeYearReturn: ret(priceAt(nowSec - 3 * 365 * 86400)),
+      fiveYearReturn:  ret(priceAt(nowSec - 5 * 365 * 86400)),
+    };
+    _fundCache.set(isin, info);
+    return info;
+  } catch {
+    return null;
+  }
+}

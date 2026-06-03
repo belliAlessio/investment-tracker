@@ -79,7 +79,7 @@ function renderCurrentTab() {
   switch (currentTab) {
     case 'dashboard': renderDashboard(); break;
     case 'inserisci': renderInserisci(); break;
-    case 'storico': renderStorico(); break;
+    case 'storico':   renderStorico();   break;
     case 'strumenti': renderStrumenti(); break;
   }
 }
@@ -116,21 +116,25 @@ function renderStrumenti() {
   const rows = data.strumenti.map(s => {
     const hasRegs = data.registrazioni.some(r => r.strumentoId === s.id);
     return `
-      <div class="strumento-item">
-        <div class="strumento-info">
-          <div class="strumento-name">${escHtml(s.nome)}</div>
-          <div class="strumento-meta">
-            ${escHtml(s.piattaforma)} · ${escHtml(s.tipo)}
-            ${s.isin ? ` · <span style="font-family:monospace">${escHtml(s.isin)}</span>` : ''}
+      <div id="sc-${s.id}">
+        <div class="strumento-item">
+          <div class="strumento-info">
+            <div class="strumento-name">${escHtml(s.nome)}</div>
+            <div class="strumento-meta">
+              ${escHtml(s.piattaforma)} · ${escHtml(s.tipo)}
+              ${s.isin ? ` · <span style="font-family:monospace">${escHtml(s.isin)}</span>` : ''}
+            </div>
+          </div>
+          <div class="strumento-actions">
+            ${s.isin ? `<button class="btn btn-sm btn-ghost" onclick="toggleFundInfo('${s.id}','${s.isin}')">ⓘ Info</button>` : ''}
+            <button class="btn btn-sm btn-secondary" onclick="startEditStrumento('${s.id}')">Modifica</button>
+            <button class="btn btn-sm btn-danger" onclick="handleDeleteStrumento('${s.id}')"
+              ${hasRegs ? 'title="Ha registrazioni — rimuovile prima dallo Storico"' : ''}>
+              Elimina
+            </button>
           </div>
         </div>
-        <div class="strumento-actions">
-          <button class="btn btn-sm btn-secondary" onclick="startEditStrumento('${s.id}')">Modifica</button>
-          <button class="btn btn-sm btn-danger" onclick="handleDeleteStrumento('${s.id}')"
-            ${hasRegs ? 'title="Ha registrazioni — rimuovile prima dallo Storico"' : ''}>
-            Elimina
-          </button>
-        </div>
+        <div id="fip-${s.id}" class="fund-info-panel" style="display:none"></div>
       </div>`;
   }).join('');
 
@@ -211,6 +215,51 @@ async function handleSaveStrumento(id) {
     }
     renderStrumenti();
   } catch (e) { alert('Errore: ' + e.message); }
+}
+
+// ── Fund Info Panel ───────────────────────────────────────────────────────
+
+async function toggleFundInfo(id, isin) {
+  const panel = document.getElementById(`fip-${id}`);
+  if (!panel) return;
+  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  panel.innerHTML = '<div class="fund-loading">Caricamento scheda...</div>';
+  const info = await fetchFundInfo(isin);
+  if (!info) { panel.style.display = 'none'; return; }
+  panel.innerHTML = buildFundCard(info);
+}
+
+function buildFundCard(info) {
+  const name    = info.longName ?? info.symbol;
+  const meta    = [info.quoteType, info.exchange, info.currency].filter(Boolean).join(' · ');
+  const price   = info.currentPrice != null ? `${info.currentPrice.toFixed(2)} ${info.currency}` : null;
+  const range52 = (info.high52 != null && info.low52 != null)
+    ? `${info.low52.toFixed(2)} – ${info.high52.toFixed(2)} ${info.currency}` : null;
+
+  const r = (n) => n != null ? fmtPerc(n) : null;
+  const ytd = r(info.ytdReturn);
+  const y1  = r(info.oneYearReturn);
+  const y3  = r(info.threeYearReturn);
+  const y5  = r(info.fiveYearReturn);
+
+  const stat = (label, val) => val
+    ? `<div class="fic-stat"><div class="fic-stat-label">${label}</div><div class="fic-stat-value">${val}</div></div>` : '';
+  const retCell = (label, val) => val
+    ? `<div class="fic-ret"><div class="fic-ret-label">${label}</div><div class="fic-ret-value ${val.startsWith('+') ? 'positive' : 'negative'}">${val}</div></div>` : '';
+
+  const stats   = [stat('Prezzo', price), stat('52 settimane', range52)].filter(Boolean).join('');
+  const returns = [retCell('YTD', ytd), retCell('1 anno', y1), retCell('3 anni', y3), retCell('5 anni', y5)].filter(Boolean).join('');
+
+  return `
+    <div class="fund-info-card">
+      <div class="fic-header">
+        <div class="fic-name">${escHtml(name)}</div>
+        ${meta ? `<div class="fic-meta">${escHtml(meta)}</div>` : ''}
+      </div>
+      ${stats   ? `<div class="fic-stats">${stats}</div>` : ''}
+      ${returns ? `<div class="fic-section"><div class="fic-section-title">Rendimenti storici (calcolati)</div><div class="fic-returns">${returns}</div></div>` : ''}
+    </div>`;
 }
 
 async function handleDeleteStrumento(id) {

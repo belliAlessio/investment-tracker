@@ -106,6 +106,28 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 .strumento-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .strumento-actions { display: flex; gap: 6px; }
 
+/* Buttons extra */
+.btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+.btn-ghost:hover { color: var(--text); border-color: var(--text-muted); opacity: 1; }
+
+/* Fund info panel */
+.fund-info-panel { border-top: 1px solid var(--border); }
+.fund-loading { padding: 10px 0; color: var(--text-muted); font-size: 13px; }
+.fund-info-card { padding: 14px 0 8px; }
+.fic-header { margin-bottom: 12px; }
+.fic-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.fic-meta { font-size: 12px; color: var(--text-muted); }
+.fic-stats { display: flex; gap: 24px; flex-wrap: wrap; padding: 10px 14px; background: var(--surface2); border-radius: var(--radius); margin-bottom: 14px; }
+.fic-stat { display: flex; flex-direction: column; gap: 3px; }
+.fic-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.fic-stat-value { font-size: 14px; font-weight: 600; }
+.fic-section { }
+.fic-section-title { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.fic-returns { display: flex; gap: 20px; flex-wrap: wrap; }
+.fic-ret { display: flex; flex-direction: column; gap: 2px; min-width: 52px; }
+.fic-ret-label { font-size: 11px; color: var(--text-muted); }
+.fic-ret-value { font-size: 16px; font-weight: 700; }
+
 /* Chart containers */
 .chart-container { position: relative; }
 
