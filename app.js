@@ -309,8 +309,13 @@ async function handleSalvaRegistrazioni() {
 
   try {
     await saveRegistrazioniMese(mese, entries);
-    alert(`Salvate ${entries.length} registrazioni per ${fmtMese(mese)}.`);
-    renderInserisci();
+    const btn = document.querySelector('#view-inserisci .btn-primary');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = 'Salvato ✓';
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+    }
   } catch (e) { alert('Errore nel salvataggio: ' + e.message); }
 }
 
@@ -331,7 +336,7 @@ function renderDashboard() {
   const recentRows = getRecentRegistrazioni(8).map(r => {
     const s = data.strumenti.find(st => st.id === r.strumentoId);
     if (!s) return '';
-    const totalInv = data.registrazioni
+    const totalInv = (s.capitalePreesistente || 0) + data.registrazioni
       .filter(reg => reg.strumentoId === s.id && reg.mese <= r.mese)
       .reduce((sum, reg) => sum + reg.versamento, 0);
     const rendP = totalInv > 0 ? ((r.valoreFinale - totalInv) / totalInv) * 100 : 0;
@@ -421,7 +426,7 @@ function renderStorico() {
   const rows = regs.map(r => {
     const s = data.strumenti.find(st => st.id === r.strumentoId);
     if (!s) return '';
-    const totalInv = data.registrazioni
+    const totalInv = (s.capitalePreesistente || 0) + data.registrazioni
       .filter(reg => reg.strumentoId === s.id && reg.mese <= r.mese)
       .reduce((sum, reg) => sum + reg.versamento, 0);
     const rendE = r.valoreFinale - totalInv;
