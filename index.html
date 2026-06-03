@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAC Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js" defer></script>
+  <script src="data.js" defer></script>
+  <script src="charts.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="app-title">PAC Tracker</div>
+      <div class="file-controls">
+        <span id="file-name" class="file-name">Nessun file aperto</span>
+        <button id="btn-open-file" class="btn btn-secondary">Apri file JSON</button>
+        <button id="btn-new-file" class="btn btn-secondary">Nuovo file JSON</button>
+      </div>
+    </header>
+
+    <div id="browser-warning" class="browser-warning hidden">
+      Questo browser non supporta la File System Access API. Usa Chrome o Edge.
+    </div>
+
+    <div id="no-file-banner" class="no-file-banner">
+      <p>Apri o crea un file <code>pac-data.json</code> per iniziare.</p>
+    </div>
+
+    <nav id="tab-nav" class="tab-nav hidden">
+      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="inserisci">Inserisci</button>
+      <button class="tab-btn" data-tab="storico">Storico</button>
+      <button class="tab-btn" data-tab="strumenti">Strumenti</button>
+    </nav>
+
+    <main id="main-content" class="main-content hidden">
+      <div id="view-dashboard" class="view active"></div>
+      <div id="view-inserisci" class="view"></div>
+      <div id="view-storico" class="view"></div>
+      <div id="view-strumenti" class="view"></div>
+    </main>
+  </div>
+</body>
+</html>
