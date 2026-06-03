@@ -138,7 +138,7 @@ function renderStrumenti() {
   }).join('');
 
   container.innerHTML = `
-    <div style="max-width:700px">
+    <div style="max-width:700px;margin:0 auto">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
         <h2 style="font-size:20px;font-weight:700">Strumenti</h2>
         <button class="btn btn-primary" onclick="showStrumentoForm()">+ Aggiungi strumento</button>
@@ -295,24 +295,26 @@ function openNewRegistrazioneModal(preStrumentoId = null) {
     .join('');
 
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
   overlay.id = 'modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px';
   overlay.innerHTML = `
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <span class="modal-title">Nuova registrazione</span>
-        <button class="modal-close" onclick="closeModal()">✕</button>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)">
+        <span style="font-size:15px;font-weight:600">Nuova registrazione</span>
+        <button onclick="closeModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;line-height:1;padding:2px">✕</button>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Mese *</label>
-          <input id="modal-mese" type="month" class="form-input" value="${currentMese}">
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Mese *</label>
+            <input id="modal-mese" type="month" class="form-input" value="${currentMese}">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Strumento *</label>
+            <select id="modal-strumento" class="form-select">${strumentoOptions}</select>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Strumento *</label>
-          <select id="modal-strumento" class="form-select">${strumentoOptions}</select>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group" style="margin:0">
             <label class="form-label">Versamento (€)</label>
             <input id="modal-versamento" type="number" min="0" step="0.01" class="form-input" placeholder="0">
@@ -322,9 +324,9 @@ function openNewRegistrazioneModal(preStrumentoId = null) {
             <input id="modal-valore" type="number" min="0" step="0.01" class="form-input" placeholder="0">
           </div>
         </div>
-        <div id="modal-existing-note" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
+        <div id="modal-existing-note" style="font-size:12px;color:var(--text-muted)"></div>
       </div>
-      <div class="modal-footer">
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border)">
         <button class="btn btn-secondary" onclick="closeModal()">Annulla</button>
         <button class="btn btn-primary" onclick="handleSaveModal()">Salva</button>
       </div>
