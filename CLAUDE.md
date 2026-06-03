@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Browser-only SPA (Chrome/Edge) to track PAC investments month by month. No server, no build step, no npm. Open `index.html` directly in the browser.
+Browser-only SPA (Chrome/Edge) to track PAC investments month by month. No build step, no npm. Run via `server.py` for full functionality (Yahoo Finance proxy), or open `index.html` directly for everything except fund info cards.
 
 ## Stack
 
@@ -22,6 +22,7 @@ Browser-only SPA (Chrome/Edge) to track PAC investments month by month. No serve
 | `data.js` | File I/O, IndexedDB handle cache, CRUD, computed stats |
 | `charts.js` | Chart.js wrappers (line, bar, donut) |
 | `app.js` | View rendering, event handlers, tab routing |
+| `server.py` | Local HTTP server + `/yf/` proxy for Yahoo Finance CORS |
 
 ## Data model (`pac-data.json`)
 
@@ -45,7 +46,7 @@ Browser-only SPA (Chrome/Edge) to track PAC investments month by month. No serve
 - All stats computed at runtime from raw registrazioni + capitalePreesistente
 - `persistData()` is called after every mutation; it writes the full JSON to disk
 - Charts use `getOrCreateChart()` to avoid duplicate Chart.js instances
-- `document._pacMese` holds the currently selected month in the Inserisci tab
+- New registrazioni are added via modal in the Storico tab (no dedicated Inserisci tab)
 
 ## Git / SSH
 
@@ -56,4 +57,8 @@ Browser-only SPA (Chrome/Edge) to track PAC investments month by month. No serve
 
 ## Running locally
 
-Open `index.html` in Chrome or Edge. No server needed.
+```bash
+python3 server.py
+```
+
+Starts a local server on `http://localhost:8080` and opens the browser automatically. Required for Yahoo Finance fund info (the `/yf/` proxy bypasses CORS). Without it, open `index.html` directly — everything works except fund info cards.

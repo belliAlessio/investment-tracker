@@ -1,6 +1,6 @@
 # 📈 Investment Tracker
 
-A local browser-only app to monitor your PAC investments month by month — no server, no installation, no cloud.
+A local browser-only app to monitor your PAC investments month by month — no installation, no cloud.
 
 ![Dark dashboard with charts](https://img.shields.io/badge/browser-Chrome%20%7C%20Edge-6366f1?style=flat-square) ![Vanilla JS](https://img.shields.io/badge/stack-HTML%20%2B%20CSS%20%2B%20JS-f59e0b?style=flat-square) ![File System Access API](https://img.shields.io/badge/storage-File%20System%20Access%20API-10b981?style=flat-square)
 
@@ -34,12 +34,18 @@ All return calculations happen at runtime — nothing redundant is stored.
 ## Getting started
 
 1. Clone the repo
-2. Open `index.html` in **Chrome or Edge** (Firefox does not support the File System Access API)
+2. Start the local server (required for fund info via Yahoo Finance):
+   ```bash
+   python3 server.py
+   ```
+   This serves the app at `http://localhost:8080` and opens it automatically.
 3. Click **"Nuovo file JSON"** → choose where to save your `pac-data.json`
-4. Go to **Strumenti** → add your funds
-5. Go to **Inserisci** → log your first monthly entry
+4. Go to **Strumenti** → add your funds (add an ISIN to get historical return data)
+5. Go to **Storico** → click **"+ Nuova registrazione"** to log your first monthly entry
 6. Check the **Dashboard** for your full picture
 
+> Fund info (prices, historical returns) is fetched from Yahoo Finance via the local proxy server.  
+> Without `server.py`, the app still works but fund info cards won't load.  
 > `pac-data.json` is in `.gitignore` — your financial data never leaves your machine.
 
 ---
@@ -51,6 +57,7 @@ All return calculations happen at runtime — nothing redundant is stored.
 | Frontend | HTML5, CSS3, Vanilla JavaScript (ES2022) |
 | Charts | [Chart.js 4](https://www.chartjs.org/) via CDN |
 | Storage | File System Access API |
+| Fund info proxy | `server.py` (Python 3, stdlib only) |
 | Dependencies | None |
 
 ---
