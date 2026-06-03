@@ -160,6 +160,26 @@ async function deleteRegistrazione(id) {
   await persistData();
 }
 
+async function upsertRegistrazione(mese, strumentoId, versamento, valoreFinale) {
+  const idx = appData.registrazioni.findIndex(r => r.mese === mese && r.strumentoId === strumentoId);
+  if (idx !== -1) {
+    appData.registrazioni[idx] = {
+      ...appData.registrazioni[idx],
+      versamento: Number(versamento) || 0,
+      valoreFinale: Number(valoreFinale) || 0,
+    };
+  } else {
+    appData.registrazioni.push({
+      id: `reg-${mese}-${strumentoId}-${Date.now().toString(36)}`,
+      mese,
+      strumentoId,
+      versamento: Number(versamento) || 0,
+      valoreFinale: Number(valoreFinale) || 0,
+    });
+  }
+  await persistData();
+}
+
 // ── Computed Stats ────────────────────────────────────────────────────────
 
 function computeStrumentoStats(strumentoId) {

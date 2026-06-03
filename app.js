@@ -78,7 +78,6 @@ function switchTab(tab) {
 function renderCurrentTab() {
   switch (currentTab) {
     case 'dashboard': renderDashboard(); break;
-    case 'inserisci': renderInserisci(); break;
     case 'storico':   renderStorico();   break;
     case 'strumenti': renderStrumenti(); break;
   }
@@ -279,97 +278,105 @@ async function handleDeleteStrumento(id) {
   }
 }
 
-// ── Inserisci View ────────────────────────────────────────────────────────
+// ── Modal nuova registrazione ─────────────────────────────────────────────
 
-function renderInserisci() {
+function openNewRegistrazioneModal(preStrumentoId = null) {
   const data = getData();
-  const container = document.getElementById('view-inserisci');
-
   if (data.strumenti.length === 0) {
-    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Aggiungi prima degli strumenti dalla tab <strong>Strumenti</strong>.</div>';
+    alert('Aggiungi prima degli strumenti dalla tab Strumenti.');
     return;
   }
 
   const now = new Date();
   const currentMese = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const selectedMese = document._pacMese ?? currentMese;
 
-  const piattaforme = getPiattaforme();
-  const platformGroups = piattaforme.map(piattaforma => {
-    const strumenti = data.strumenti.filter(s => s.piattaforma === piattaforma);
-    return `
-      <div class="platform-group">
-        <div class="platform-title">${escHtml(piattaforma)}</div>
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:4px">
-          <div class="entry-label">Strumento</div>
-          <div class="entry-label">Versamento (€)</div>
-          <div class="entry-label">Valore finale (€)</div>
-        </div>
-        ${strumenti.map(s => {
-          const existing = data.registrazioni.find(r => r.strumentoId === s.id && r.mese === selectedMese);
-          return `
-            <div class="entry-row">
-              <div style="display:flex;flex-direction:column;justify-content:center">
-                <span style="font-size:14px">${escHtml(s.nome)}</span>
-                ${s.isin ? `<span style="font-size:11px;color:var(--text-muted);font-family:monospace">${escHtml(s.isin)}</span>` : ''}
-              </div>
-              <input type="number" min="0" step="0.01" class="form-input entry-versamento"
-                data-id="${s.id}" placeholder="0"
-                value="${existing ? existing.versamento : ''}">
-              <input type="number" min="0" step="0.01" class="form-input entry-valore"
-                data-id="${s.id}" placeholder="0"
-                value="${existing ? existing.valoreFinale : ''}">
-            </div>`;
-        }).join('')}
-      </div>`;
-  }).join('');
+  const strumentoOptions = data.strumenti
+    .map(s => `<option value="${s.id}" ${s.id === preStrumentoId ? 'selected' : ''}>${escHtml(s.nome)} — ${escHtml(s.piattaforma)}</option>`)
+    .join('');
 
-  container.innerHTML = `
-    <div style="max-width:800px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h2 style="font-size:20px;font-weight:700">Inserisci registrazione</h2>
-        <div style="display:flex;align-items:center;gap:10px">
-          <label class="form-label" style="margin:0">Mese:</label>
-          <input type="month" id="input-mese" class="form-input" style="width:160px" value="${selectedMese}">
-        </div>
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <span class="modal-title">Nuova registrazione</span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
-      <div class="panel" style="margin-bottom:16px">${platformGroups}</div>
-      <button class="btn btn-primary" onclick="handleSalvaRegistrazioni()" style="padding:10px 28px;font-size:15px">Salva</button>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Mese *</label>
+          <input id="modal-mese" type="month" class="form-input" value="${currentMese}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Strumento *</label>
+          <select id="modal-strumento" class="form-select">${strumentoOptions}</select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Versamento (€)</label>
+            <input id="modal-versamento" type="number" min="0" step="0.01" class="form-input" placeholder="0">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Valore finale (€)</label>
+            <input id="modal-valore" type="number" min="0" step="0.01" class="form-input" placeholder="0">
+          </div>
+        </div>
+        <div id="modal-existing-note" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+        <button class="btn btn-primary" onclick="handleSaveModal()">Salva</button>
+      </div>
     </div>`;
 
-  document.getElementById('input-mese').addEventListener('change', e => {
-    document._pacMese = e.target.value;
-    renderInserisci();
-  });
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  // Pre-fill if record already exists for current selection
+  const checkExisting = () => {
+    const mese = document.getElementById('modal-mese').value;
+    const strumentoId = document.getElementById('modal-strumento').value;
+    const existing = getData().registrazioni.find(r => r.mese === mese && r.strumentoId === strumentoId);
+    const note = document.getElementById('modal-existing-note');
+    if (existing) {
+      document.getElementById('modal-versamento').value = existing.versamento || '';
+      document.getElementById('modal-valore').value = existing.valoreFinale || '';
+      note.textContent = `Esiste già una registrazione per questo mese — verrà sovrascritta.`;
+    } else {
+      document.getElementById('modal-versamento').value = '';
+      document.getElementById('modal-valore').value = '';
+      note.textContent = '';
+    }
+  };
+
+  document.getElementById('modal-mese').addEventListener('change', checkExisting);
+  document.getElementById('modal-strumento').addEventListener('change', checkExisting);
+  checkExisting();
+
+  document.getElementById('modal-mese').focus();
 }
 
-async function handleSalvaRegistrazioni() {
-  const mese = document.getElementById('input-mese').value;
+function closeModal() {
+  const overlay = document.getElementById('modal-overlay');
+  if (overlay) overlay.remove();
+}
+
+async function handleSaveModal() {
+  const mese = document.getElementById('modal-mese').value;
+  const strumentoId = document.getElementById('modal-strumento').value;
+  const versamento = parseFloat(document.getElementById('modal-versamento').value) || 0;
+  const valoreFinale = parseFloat(document.getElementById('modal-valore').value) || 0;
+
   if (!mese) { alert('Seleziona un mese.'); return; }
-
-  const entries = [];
-  document.querySelectorAll('.entry-versamento').forEach(input => {
-    const id = input.dataset.id;
-    const versamento = parseFloat(input.value) || 0;
-    const valoreInput = document.querySelector(`.entry-valore[data-id="${id}"]`);
-    const valoreFinale = parseFloat(valoreInput?.value) || 0;
-    if (versamento > 0 || valoreFinale > 0) {
-      entries.push({ strumentoId: id, versamento, valoreFinale });
-    }
-  });
-
-  if (entries.length === 0) { alert('Inserisci almeno un versamento o valore.'); return; }
+  if (!strumentoId) { alert('Seleziona uno strumento.'); return; }
+  if (versamento === 0 && valoreFinale === 0) { alert('Inserisci almeno un valore.'); return; }
 
   try {
-    await saveRegistrazioniMese(mese, entries);
-    const btn = document.querySelector('#view-inserisci .btn-primary');
-    if (btn) {
-      const orig = btn.textContent;
-      btn.textContent = 'Salvato ✓';
-      btn.disabled = true;
-      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
-    }
-  } catch (e) { alert('Errore nel salvataggio: ' + e.message); }
+    await upsertRegistrazione(mese, strumentoId, versamento, valoreFinale);
+    closeModal();
+    renderStorico();
+  } catch (e) { alert('Errore: ' + e.message); }
 }
 
 // ── Dashboard View ────────────────────────────────────────────────────────
@@ -516,6 +523,7 @@ function renderStorico() {
           ${data.strumenti.map(s => `<option value="${s.id}" ${storicoFilters.strumentoId===s.id?'selected':''}>${escHtml(s.nome)}</option>`).join('')}
         </select>
         <button class="btn btn-secondary" onclick="handleExportJSON()">⬇ Esporta JSON</button>
+        <button class="btn btn-primary" onclick="openNewRegistrazioneModal()">+ Nuova registrazione</button>
       </div>
     </div>
 
