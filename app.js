@@ -126,7 +126,7 @@ function renderStrumenti() {
             </div>
           </div>
           <div class="strumento-actions">
-            ${s.isin ? `<button class="btn btn-sm btn-ghost" onclick="toggleFundInfo('${s.id}','${s.isin}')">ⓘ Info</button>` : ''}
+            ${s.isin ? `<button class="btn btn-sm btn-ghost" onclick="toggleFundInfo('${s.id}')">ⓘ Info</button>` : ''}
             <button class="btn btn-sm btn-secondary" onclick="startEditStrumento('${s.id}')">Modifica</button>
             <button class="btn btn-sm btn-danger" onclick="handleDeleteStrumento('${s.id}')"
               ${hasRegs ? 'title="Ha registrazioni — rimuovile prima dallo Storico"' : ''}>
@@ -134,7 +134,7 @@ function renderStrumenti() {
             </button>
           </div>
         </div>
-        <div id="fip-${s.id}" class="fund-info-panel" style="display:none"></div>
+        <div id="fip-${s.id}" class="fund-info-panel">${s.isin ? '<div class="fund-loading">Caricamento scheda...</div>' : ''}</div>
       </div>`;
   }).join('');
 
@@ -151,6 +151,15 @@ function renderStrumenti() {
           : rows}
       </div>
     </div>`;
+
+  data.strumenti.filter(s => s.isin).forEach(s => {
+    fetchFundInfo(s.isin).then(info => {
+      const panel = document.getElementById(`fip-${s.id}`);
+      if (!panel) return;
+      if (info) panel.innerHTML = buildFundCard(info);
+      else panel.innerHTML = '';
+    });
+  });
 }
 
 function showStrumentoForm(existing = null) {
@@ -219,15 +228,10 @@ async function handleSaveStrumento(id) {
 
 // ── Fund Info Panel ───────────────────────────────────────────────────────
 
-async function toggleFundInfo(id, isin) {
+function toggleFundInfo(id) {
   const panel = document.getElementById(`fip-${id}`);
   if (!panel) return;
-  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-  panel.style.display = 'block';
-  panel.innerHTML = '<div class="fund-loading">Caricamento scheda...</div>';
-  const info = await fetchFundInfo(isin);
-  if (!info) { panel.style.display = 'none'; return; }
-  panel.innerHTML = buildFundCard(info);
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
 }
 
 function buildFundCard(info) {

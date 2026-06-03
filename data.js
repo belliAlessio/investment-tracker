@@ -206,12 +206,18 @@ function getPiattaforme() {
 
 const _fundCache = new Map();
 
+function _yfUrl(host, path) {
+  const onLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (onLocalhost) return `/yf/${host}/${path}`;
+  return `https://corsproxy.io/?url=${encodeURIComponent(`https://${host}/${path}`)}`;
+}
+
 async function fetchFundInfo(isin) {
   if (_fundCache.has(isin)) return _fundCache.get(isin);
   try {
     // Step 1: ISIN → ticker via search
     const searchResp = await fetch(
-      `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(isin)}&quotesCount=5&newsCount=0`
+      _yfUrl('query2.finance.yahoo.com', `v1/finance/search?q=${encodeURIComponent(isin)}&quotesCount=5&newsCount=0`)
     );
     if (!searchResp.ok) return null;
     const searchJson = await searchResp.json();
@@ -221,7 +227,7 @@ async function fetchFundInfo(isin) {
 
     // Step 2: 5-year monthly chart — no crumb needed
     const chartResp = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(match.symbol)}?range=5y&interval=1mo`
+      _yfUrl('query1.finance.yahoo.com', `v8/finance/chart/${encodeURIComponent(match.symbol)}?range=5y&interval=1mo`)
     );
     if (!chartResp.ok) return null;
     const chartJson = await chartResp.json();
