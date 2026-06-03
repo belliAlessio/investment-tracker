@@ -190,7 +190,7 @@ function computeStrumentoStats(strumentoId) {
     .sort((a, b) => a.mese.localeCompare(b.mese));
   const totalInvestito = capitalePreesistente + regs.reduce((sum, r) => sum + r.versamento, 0);
   const latest = regs[regs.length - 1];
-  const valoreAttuale = latest ? latest.valoreFinale : 0;
+  const valoreAttuale = latest ? latest.valoreFinale : capitalePreesistente;
   const rendimentoEuro = valoreAttuale - totalInvestito;
   const rendimentoPerc = totalInvestito > 0 ? (rendimentoEuro / totalInvestito) * 100 : 0;
   return { totalInvestito, valoreAttuale, rendimentoEuro, rendimentoPerc, regs };

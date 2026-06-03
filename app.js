@@ -115,7 +115,7 @@ function renderStrumenti() {
   const rows = data.strumenti.map(s => {
     const hasRegs = data.registrazioni.some(r => r.strumentoId === s.id);
     return `
-      <div id="sc-${s.id}">
+      <div id="sc-${s.id}" class="panel" style="padding:14px 16px">
         <div class="strumento-item">
           <div class="strumento-info">
             <div class="strumento-name">${escHtml(s.nome)}</div>
@@ -144,9 +144,9 @@ function renderStrumenti() {
         <button class="btn btn-primary" onclick="showStrumentoForm()">+ Aggiungi strumento</button>
       </div>
       <div id="strumento-form-container"></div>
-      <div class="panel">
+      <div style="display:flex;flex-direction:column;gap:12px">
         ${data.strumenti.length === 0
-          ? '<p style="color:var(--text-muted);text-align:center;padding:20px">Nessuno strumento configurato.</p>'
+          ? '<div class="panel"><p style="color:var(--text-muted);text-align:center;padding:20px">Nessuno strumento configurato.</p></div>'
           : rows}
       </div>
     </div>`;
